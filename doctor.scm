@@ -73,39 +73,24 @@
 
 ; Change person in user's phrase
 (define (change-person phrase)
-   (many-replace '((i you) (me you) (am are) (my your)) phrase)
+    (many-replace
+        '((i you) (me you) (am are) (my your) (are am) (you i) (your my))
+        phrase
+    )
 )
 
 ; Replace patterns to new values.
 ; replacement-pairs = ((pat1 val1) (pat2 val2) ...)
 (define (many-replace replacement-pairs lst)
-    (cond
-        ((null? replacement-pairs) lst)
-        (else
-            (let ((pat-rep (car replacement-pairs)))
-                (replace (car pat-rep)
-                         (cadr pat-rep)
-                         (many-replace (cdr replacement-pairs) lst)
-                )
-            )
-        )
-    )
+    (map (lambda (x) (replace replacement-pairs x)) lst)
 )
 
-; Replace every entry of pattern in lst
-(define (replace pattern replacement lst)
+; Replace element with first matching replacement
+(define (replace pairs elem)
     (cond
-        ((null? lst) '())
-        ((equal? (car lst) pattern)
-            (cons replacement
-                  (replace pattern replacement (cdr lst))
-            )
-        )
-        (else
-            (cons (car lst)
-                  (replace pattern replacement (cdr lst))
-            )
-        )
+        ((null? pairs) elem)
+        ((equal? (caar pairs) elem) (cadar pairs))
+        (else (replace (cdr pairs) elem))
     )
 )
 
