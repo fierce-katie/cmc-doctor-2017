@@ -43,8 +43,9 @@
 
 ; Reply to visitor
 (define (reply user-response answers)
-    (let ((strat (choose-strat answers)))
+    (let ((strat (choose-strat user-response answers)))
         (cond
+            ((list? strat) strat)
             ((equal? strat 'qualifier)
                 (append (qualifier) (change-person user-response))
             )
@@ -120,12 +121,82 @@
     )
 )
 
-; Choose answer generation strategy
-(define (choose-strat answers)
-    (if (null? answers)
-        (pick-random '(qualifier hedge))
-        (pick-random '(qualifier hedge earlier))
-     )
+; Keywords
+(define keywords '(depressed suicide mother father parents son daughter work job study university))
+
+; Look for keywords in user response to use keyphrase
+(define (find-keyword user-response)
+    (let ((keys (get-keywords user-response)))
+        (if (null? keys)
+            '()
+            (use-keywords keys)
+        )
+    )
 )
 
+; List keywords found in user response
+(define (get-keywords user-response)
+    (cond
+        ((null? user-response) '())
+        ((member (car user-response) keywords)
+            (cons (car user-response) (get-keywords (cdr user-response)))
+        )
+        (else (get-keywords (cdr user-response)))
+    )
+)
+
+; Use random keyphrase for one of keywords
+(define (use-keywords keys)
+    (let ((chosen-key (pick-random keys)))
+        (cond
+            ((member chosen-key '(depressed suicide))
+                (pick-random '((when you feel depressed go out for an ice-cream)
+                               (depression is a disease that can be treated))
+                )
+            )
+            ((member chosen-key '(mother father parents son daughter))
+                (append
+                    (pick-random '((tell me more about your)
+                                   (why do you feel that way about your)
+                                   (have you always been treated like that by your)
+                                   (can you improve the relationship with your)
+                                   (have you talked about it with your)
+                                   (will you talk about it with your))
+                    )
+                    (list chosen-key)
+                )
+            )
+            ((member chosen-key '(work job))
+                (append
+                    (pick-random '((tell me more about your)
+                                   (have you always felt like this about your)
+                                   (are you stressed because of your)
+                                   (would you like to change your))
+                    )
+                    (list chosen-key)
+                )
+            )
+            (else (pick-random '((what do you study)
+                                 (do you like the place where you study)
+                                 (do you like the subjects you study)
+                                 (do you want to give up your studies)
+                                 (do you have friends there))
+                  )
+            )
+        )
+    )
+)
+
+; Choose answer generation strategy
+(define (choose-strat user-response answers)
+    (let ((key-phrase (find-keyword user-response)))
+        (if (null? key-phrase)
+            (if (null? answers)
+                (pick-random '(qualifier hedge))
+                (pick-random '(qualifier hedge earlier))
+            )
+            key-phrase
+        )
+    )
+)
 
