@@ -1,138 +1,70 @@
 #lang scheme/base
 
-; Start
-(define (visit-doctor name)
-    (cond
-        ((equal? name 'suppertime) (print '(time to go home!)))
-        (else
-            (print (list 'hello name))
-            (print '(what seems to be the trouble?))
-            (doctor-driver-loop name '())
-        )
-    )
+; STRATEGY PREDICATES
+
+; Check if user answer is too short
+(define (length-pred user-response _answers)
+    (< (length user-response) 3)
 )
 
-; Ask patient's name
-(define (ask-name)
-    (print '(next!))
-    (print '(who are you?))
-    (newline)
-    (print '**)
-    (car (read))
+; Check if user has already said something
+(define (earlier-pred _user-response answers)
+    (pair? answers)
 )
 
-; Main loop
-(define (doctor-driver-loop name answers)
-    (newline)
-    (print '**)
-    (let ((user-response (read)))
-        (cond
-            ((equal? user-response '(goodbye))
-                (print (list 'goodbye name))
-                (print '(see you next week))
-                (newline)
-                (visit-doctor (ask-name))
-            )
-            (else
-                (print (reply user-response answers))
-                (doctor-driver-loop name (cons user-response answers))
-            )
-        )
-    )
+; Check if user answer contains keywords
+(define (keywords-pred user-response _answers)
+    (pair? (get-keywords user-response))
 )
 
-; Reply to visitor
-(define (reply user-response answers)
-    (let ((strat (choose-strat user-response answers)))
-        (cond
-            ((list? strat) strat)
-            ((equal? strat 'qualifier)
-                (append (qualifier) (change-person user-response))
-            )
-            ((equal? strat 'earlier)
-                (append '(earlier you said that)
-                         (change-person (pick-random answers))
-                )
-            )
-            (else (hedge))
-        )
-    )
-)
+; STRATEGY FUNCTIONS
 
-; #t or #f with equal probability
-(define (fifty-fifty) (= (random 2) 0))
-
-; Randomly chosen qualifier
-(define (qualifier)
-    (pick-random '((you seem to think)
-                   (you feel that)
-                   (why do you believe)
-                   (why do you say)
-                   (do you know why)
-                   (how often do you think)
-                   (when did you start to feel)
-                   (we can discuss why you feel that)
-                   (is there anyone who made you feel that))
-    )
-)
-
-; Randomly chosen hedge
-(define (hedge)
-    (pick-random '((please go on)
-                   (many people have the same sorts of feelings)
-                   (many of my patients have told me the same thing)
-                   (you are not the only one who feels like this)
-                   (i see your problem)
+; Ask to say more if the answer is too short
+(define (lenght-func _user-response _answers)
+    (pick-random '((could you say more)
+                   (i would like to know more about it)
                    (i think you need to tell me more about it)
                    (i can help you if you give more details)
-                   (you can feel like this because of many different reasons)
-                   (shall we change the topic)
-                   (please continue)
-                   (i see it really disturbs you)
                    (please tell me more about it))
     )
 )
 
-; Pick random element from list
-(define (pick-random lst)
-  (list-ref lst (random (length lst)))
-)
-
-; Change person in user's phrase
-(define (change-person phrase)
-    (many-replace
-        '((i you) (me you) (am are) (my your) (are am) (you i) (your my))
-        phrase
+; Randomly choose one of the previous answers
+(define (earlier-func _user-response answers)
+    (append '(earlier you said that)
+            (change-person (pick-random answers))
     )
 )
 
-; Replace patterns to new values.
-; replacement-pairs = ((pat1 val1) (pat2 val2) ...)
-(define (many-replace replacement-pairs lst)
-    (map (lambda (x) (replace replacement-pairs x)) lst)
+; Say key phrase that matches a random keyword from user answer
+(define (keywords-func user-response _answers)
+    (use-keywords (get-keywords user-response))
 )
 
-; Replace element with first matching replacement
-(define (replace pairs elem)
-    (cond
-        ((null? pairs) elem)
-        ((equal? (caar pairs) elem) (cadar pairs))
-        (else (replace (cdr pairs) elem))
+; Say some general phrase
+(define (hedge-func _user-response _answers) (hedge))
+
+; Say some general phrase referring to current response
+(define (qualifier-func user-response _answers)
+    (append (qualifier) (change-person user-response))
+)
+
+; List of strategy predicates and matching functions
+(define strategies
+    (list
+        (cons length-pred lenght-func)
+        (cons earlier-pred earlier-func)
+        (cons keywords-pred keywords-func)
     )
 )
+
+(define pred car)
+(define func cdr)
+
+; KEYWORDS STRATEGY
 
 ; Keywords
 (define keywords '(depressed suicide mother father parents son daughter work job study university))
-
-; Look for keywords in user response to use keyphrase
-(define (find-keyword user-response)
-    (let ((keys (get-keywords user-response)))
-        (if (null? keys)
-            '()
-            (use-keywords keys)
-        )
-    )
-)
 
 ; List keywords found in user response
 (define (get-keywords user-response)
@@ -187,16 +119,146 @@
     )
 )
 
-; Choose answer generation strategy
-(define (choose-strat user-response answers)
-    (let ((key-phrase (find-keyword user-response)))
-        (if (null? key-phrase)
-            (if (null? answers)
-                (pick-random '(qualifier hedge))
-                (pick-random '(qualifier hedge earlier))
+; QUALIFIER STRATEGY
+
+; Randomly chosen qualifier
+(define (qualifier)
+    (pick-random '((you seem to think)
+                   (you feel that)
+                   (why do you believe)
+                   (why do you say)
+                   (do you know why)
+                   (how often do you think)
+                   (when did you start to feel)
+                   (we can discuss why you feel that)
+                   (is there anyone who made you feel that))
+    )
+)
+
+; Change person in user's phrase
+(define (change-person phrase)
+    (many-replace
+        '((i you) (me you) (am are) (my your) (are am) (you i) (your my))
+        phrase
+    )
+)
+
+; Replace patterns to new values.
+; replacement-pairs = ((pat1 val1) (pat2 val2) ...)
+(define (many-replace replacement-pairs lst)
+    (map (lambda (x) (replace replacement-pairs x)) lst)
+)
+
+; Replace element with first matching replacement
+(define (replace pairs elem)
+    (cond
+        ((null? pairs) elem)
+        ((equal? (caar pairs) elem) (cadar pairs))
+        (else (replace (cdr pairs) elem))
+    )
+)
+
+; HEDGE STRATEGY
+
+; Randomly chosen hedge
+(define (hedge)
+    (pick-random '((please go on)
+                   (many people have the same sorts of feelings)
+                   (many of my patients have told me the same thing)
+                   (you are not the only one who feels like this)
+                   (i see your problem)
+                   (you can feel like this because of many different reasons)
+                   (shall we change the topic)
+                   (please continue)
+                   (i see it really disturbs you)
+                   (please tell me more about it))
+    )
+)
+
+; STRATEGY CHOICE
+
+; Get list of all strategy functions that can be applied
+(define (choose-strats user-response answers)
+    (append  (list hedge-func qualifier-func)
+             (filter-preds strategies user-response answers)
+    )
+)
+
+; Filter strategy functions that can be applied
+(define (filter-preds strats user-response answers)
+    (define (go lst acc)
+        (cond
+            ((null? lst) acc)
+            (((pred (car lst)) user-response answers)
+                (go (cdr lst) (cons (func (car lst)) acc))
             )
-            key-phrase
+            (else (go (cdr lst) acc))
         )
+    )
+    (go strats '())
+)
+
+; UTILS
+
+; #t or #f with equal probability
+(define (fifty-fifty) (= (random 2) 0))
+
+; Pick random element from list
+(define (pick-random lst)
+  (list-ref lst (random (length lst)))
+)
+
+; MAIN
+
+; Start
+(define (visit-doctor name)
+    (cond
+        ((equal? name 'suppertime) (print '(time to go home!)))
+        (else
+            (print (list 'hello name))
+            (print '(what seems to be the trouble?))
+            (doctor-driver-loop name '())
+        )
+    )
+)
+
+; Ask patient's name
+(define (ask-name)
+    (print '(next!))
+    (print '(who are you?))
+    (newline)
+    (print '**)
+    (car (read))
+)
+
+; Main loop
+(define (doctor-driver-loop name answers)
+    (newline)
+    (print '**)
+    (let ((user-response (read)))
+        (cond
+            ((equal? user-response '(goodbye))
+                (print (list 'goodbye name))
+                (print '(see you next week))
+                (newline)
+                (visit-doctor (ask-name))
+            )
+            (else
+                (print (reply user-response answers))
+                (doctor-driver-loop name (cons user-response answers))
+            )
+        )
+    )
+)
+
+; Reply to visitor
+(define (reply user-response answers)
+    (let*
+        ((strats (choose-strats user-response answers))
+         (strat-func (pick-random strats)))
+        (display strats)
+        (newline)
+        (strat-func user-response answers)
     )
 )
 
