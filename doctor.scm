@@ -4,11 +4,11 @@
 (define (visit-doctor name)
     (print (list 'hello name))
     (print '(what seems to be the trouble?))
-    (doctor-driver-loop name)
+    (doctor-driver-loop name '())
 )
 
 ; Main loop
-(define (doctor-driver-loop name)
+(define (doctor-driver-loop name answers)
     (newline)
     (print '**)
     (let ((user-response (read)))
@@ -17,18 +17,27 @@
                 (print (list 'goodbye name))
                 (print '(see you next week)))
             (else
-                (print (reply user-response))
-                (doctor-driver-loop name)
+                (print (reply user-response answers))
+                (doctor-driver-loop name (cons user-response answers))
             )
         )
     )
 )
 
 ; Reply to visitor
-(define (reply user-response)
-    (cond
-        ((fifty-fifty) (append (qualifier) (change-person user-response)))
-        (else (hedge))
+(define (reply user-response answers)
+    (let ((strat (choose-strat answers)))
+        (cond
+            ((equal? strat 'qualifier)
+                (append (qualifier) (change-person user-response))
+            )
+            ((equal? strat 'earlier)
+                (append '(earlier you said that)
+                         (change-person (pick-random answers))
+                )
+            )
+            (else (hedge))
+        )
     )
 )
 
@@ -93,4 +102,13 @@
         (else (replace (cdr pairs) elem))
     )
 )
+
+; Choose answer generation strategy
+(define (choose-strat answers)
+    (if (null? answers)
+        (pick-random '(qualifier hedge))
+        (pick-random '(qualifier hedge earlier))
+     )
+)
+
 
