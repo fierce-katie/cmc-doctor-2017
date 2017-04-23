@@ -2,9 +2,23 @@
 
 ; Start
 (define (visit-doctor name)
-    (print (list 'hello name))
-    (print '(what seems to be the trouble?))
-    (doctor-driver-loop name '())
+    (cond
+        ((equal? name 'suppertime) (print '(time to go home!)))
+        (else
+            (print (list 'hello name))
+            (print '(what seems to be the trouble?))
+            (doctor-driver-loop name '())
+        )
+    )
+)
+
+; Ask patient's name
+(define (ask-name)
+    (print '(next!))
+    (print '(who are you?))
+    (newline)
+    (print '**)
+    (car (read))
 )
 
 ; Main loop
@@ -15,7 +29,10 @@
         (cond
             ((equal? user-response '(goodbye))
                 (print (list 'goodbye name))
-                (print '(see you next week)))
+                (print '(see you next week))
+                (newline)
+                (visit-doctor (ask-name))
+            )
             (else
                 (print (reply user-response answers))
                 (doctor-driver-loop name (cons user-response answers))
