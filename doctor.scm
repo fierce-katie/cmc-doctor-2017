@@ -64,7 +64,7 @@
 ; KEYWORDS STRATEGY
 
 ; Keywords
-(define keywords '(depressed suicide mother father parents son daughter work job study university))
+(define keywords '(depressed suicidal mother father parents son daughter work job study university ugly fat creepy))
 
 ; List keywords found in user response
 (define (get-keywords user-response)
@@ -80,41 +80,57 @@
 ; Use random keyphrase for one of keywords
 (define (use-keywords keys)
     (let ((chosen-key (pick-random keys)))
-        (cond
-            ((member chosen-key '(depressed suicide))
-                (pick-random '((when you feel depressed go out for an ice-cream)
-                               (depression is a disease that can be treated))
-                )
-            )
-            ((member chosen-key '(mother father parents son daughter))
-                (append
-                    (pick-random '((tell me more about your)
-                                   (why do you feel that way about your)
-                                   (have you always been treated like that by your)
-                                   (can you improve the relationship with your)
-                                   (have you talked about it with your)
-                                   (will you talk about it with your))
+        (replace-all chosen-key
+            (pick-random
+                (cond
+                    ((member chosen-key '(depressed suicidal)) ;depression
+                        '((when you feel depressed go out for an ice-cream)
+                          (depression is a disease that can be treated))
                     )
-                    (list chosen-key)
-                )
-            )
-            ((member chosen-key '(work job))
-                (append
-                    (pick-random '((tell me more about your)
-                                   (have you always felt like this about your)
-                                   (are you stressed because of your)
-                                   (would you like to change your))
+                    ((member chosen-key '(mother father parents son daughter)) ;family
+                        '((tell me more about your *)
+                          (can you improve the relationship with your *)
+                          (have you talked about it with your *)
+                          (does your * treat everyone else like that)
+                          (your * seems to trouble you)
+                          (will you talk about it with your *))
                     )
-                    (list chosen-key)
+                    ((member chosen-key '(work job)) ;job
+                        '((tell me more about your *)
+                          (are you stressed because of your *)
+                          (is your * like you imagined it would be)
+                          (what * would you prefer instead)
+                          (would you like to change your *))
+                    )
+                    ((member chosen-key '(study university)) ;study
+                        '((what do you study)
+                         (do you like the place where you study)
+                         (do you like the subjects you study)
+                         (do you want to give up your studies)
+                         (do you have friends there))
+                    )
+                    (else
+                        '((thinking you are * may lead to depression) ;appearence
+                          (your personality is much more important than your look)
+                          (have anyone told you that you are * when you were a child)
+                          (dont let anyone say you are *)
+                         )
+                    )
                 )
             )
-            (else (pick-random '((what do you study)
-                                 (do you like the place where you study)
-                                 (do you like the subjects you study)
-                                 (do you want to give up your studies)
-                                 (do you have friends there))
-                  )
-            )
+        )
+    )
+)
+
+; Replace all * to <new>
+(define (replace-all new lst)
+    (cond
+        ((null? lst) lst)
+        ((equal? (car lst) '*)
+            (cons new (replace-all new (cdr lst)))
+        )
+        (else
+            (cons (car lst) (replace-all new (cdr lst)))
         )
     )
 )
