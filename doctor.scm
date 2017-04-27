@@ -234,7 +234,7 @@
     (let*
         ((total (foldl + 0 (map cadr strats)))
          (rnd (+ 1 (random total))))
-        (display rnd) (newline)
+        ;(display rnd) (newline)
         (car (go 0 rnd strats))
     )
 )
@@ -297,10 +297,10 @@
     (let*
         ((strats (choose-strats user-response answers))
          (strat-func (pick-weighted strats)))
-        (display strats)
-        (newline)
-        (display strat-func)
-        (newline)
+        ;(display strats)
+        ;(newline)
+        ;(display strat-func)
+        ;(newline)
         (strat-func user-response answers)
     )
 )
