@@ -52,14 +52,15 @@
 ; List of strategy predicates and matching functions
 (define strategies
     (list
-        (cons length-pred lenght-func)
-        (cons earlier-pred earlier-func)
-        (cons keywords-pred keywords-func)
+        (list length-pred lenght-func 3)
+        (list earlier-pred earlier-func 4)
+        (list keywords-pred keywords-func 5)
     )
 )
 
 (define pred car)
-(define func cdr)
+(define func cadr)
+(define weight caddr)
 
 ; KEYWORDS STRATEGY
 
@@ -195,23 +196,47 @@
 
 ; Get list of all strategy functions that can be applied
 (define (choose-strats user-response answers)
-    (append  (list hedge-func qualifier-func)
+    (append  (list (list hedge-func 1) (list qualifier-func 2))
              (filter-preds strategies user-response answers)
     )
 )
 
-; Filter strategy functions that can be applied
+; Filter strategies that can be applied
 (define (filter-preds strats user-response answers)
     (define (go lst acc)
         (cond
             ((null? lst) acc)
             (((pred (car lst)) user-response answers)
-                (go (cdr lst) (cons (func (car lst)) acc))
+                (go (cdr lst) (cons (cdr (car lst)) acc))
             )
             (else (go (cdr lst) acc))
         )
     )
     (go strats '())
+)
+
+; Pick random strategy using weights.
+; strats = ((func weitght) ...)
+(define (pick-weighted strats)
+    (define (go cur aim lst)
+        (cond
+            ((null? (cdr lst))
+                (car lst)
+            )
+            ((>= (+ cur (cadar lst)) aim)
+                (car lst)
+            )
+            (else
+                (go (+ cur (cadar lst)) aim (cdr lst))
+            )
+         )
+    )
+    (let*
+        ((total (foldl + 0 (map cadr strats)))
+         (rnd (+ 1 (random total))))
+        (display rnd) (newline)
+        (car (go 0 rnd strats))
+    )
 )
 
 ; UTILS
@@ -271,8 +296,10 @@
 (define (reply user-response answers)
     (let*
         ((strats (choose-strats user-response answers))
-         (strat-func (pick-random strats)))
+         (strat-func (pick-weighted strats)))
         (display strats)
+        (newline)
+        (display strat-func)
         (newline)
         (strat-func user-response answers)
     )
