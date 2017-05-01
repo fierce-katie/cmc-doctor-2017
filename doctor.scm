@@ -58,69 +58,88 @@
     )
 )
 
+; "Getters" for strategy components
 (define pred car)
 (define func cadr)
 (define weight caddr)
 
 ; KEYWORDS STRATEGY
 
-; Keywords
-(define keywords '(depressed suicidal mother father parents son daughter work job study university ugly fat creepy))
+; Key phrases ((<keywords> <phrases>) ...)
+(define key-phrases
+    '(
+         ((depressed suicidal) ; depression
+             ((when you feel depressed go out for an ice-cream)
+              (depression is a disease that can be treated))
+         )
+         ((mother father parents son daughter) ;family
+             ((tell me more about your *)
+              (can you improve the relationship with your *)
+              (have you talked about it with your *)
+              (does your * treat everyone else like that)
+              (your * seems to trouble you)
+              (will you talk about it with your *))
+         )
+         ((work job) ; work
+             ((tell me more about your *)
+              (are you stressed because of your *)
+              (is your * like you imagined it would be)
+              (what * would you prefer instead)
+              (would you like to change your *))
+         )
+         ((study university) ; study
+             ((what do you study)
+              (do you like the place where you study)
+              (do you like the subjects you study)
+              (do you want to give up your studies)
+              (do you have friends there))
+         )
+         ((ugly creepy fat) ; appearence
+             ((thinking you are * may lead to depression)
+              (your personality is much more important than your look)
+              (have anyone told you that you are * when you were a child)
+              (dont let anyone say you are *))
+         )
+     )
+)
 
 ; List keywords found in user response
 (define (get-keywords user-response)
-    (cond
-        ((null? user-response) '())
-        ((member (car user-response) keywords)
-            (cons (car user-response) (get-keywords (cdr user-response)))
+    (define (go resp keywords)
+        (cond
+            ((null? resp) '())
+            ((member (car resp) keywords)
+                (cons (car resp) (go (cdr resp) keywords))
+            )
+            (else (go (cdr resp) keywords))
         )
-        (else (get-keywords (cdr user-response)))
     )
+    (go user-response (foldl append '() (map car key-phrases)))
 )
 
 ; Use random keyphrase for one of keywords
 (define (use-keywords keys)
     (let ((chosen-key (pick-random keys)))
         (replace-all chosen-key
-            (pick-random
-                (cond
-                    ((member chosen-key '(depressed suicidal)) ;depression
-                        '((when you feel depressed go out for an ice-cream)
-                          (depression is a disease that can be treated))
-                    )
-                    ((member chosen-key '(mother father parents son daughter)) ;family
-                        '((tell me more about your *)
-                          (can you improve the relationship with your *)
-                          (have you talked about it with your *)
-                          (does your * treat everyone else like that)
-                          (your * seems to trouble you)
-                          (will you talk about it with your *))
-                    )
-                    ((member chosen-key '(work job)) ;job
-                        '((tell me more about your *)
-                          (are you stressed because of your *)
-                          (is your * like you imagined it would be)
-                          (what * would you prefer instead)
-                          (would you like to change your *))
-                    )
-                    ((member chosen-key '(study university)) ;study
-                        '((what do you study)
-                         (do you like the place where you study)
-                         (do you like the subjects you study)
-                         (do you want to give up your studies)
-                         (do you have friends there))
-                    )
-                    (else
-                        '((thinking you are * may lead to depression) ;appearence
-                          (your personality is much more important than your look)
-                          (have anyone told you that you are * when you were a child)
-                          (dont let anyone say you are *)
-                         )
-                    )
-                )
+            (pick-random (get-key-phrases chosen-key key-phrases))
+        )
+    )
+)
+
+; Get all key phrases that match given keyword
+(define (get-key-phrases keyword phrases)
+    (define (go phs acc)
+        (cond
+            ((null? phs) acc)
+            ((member keyword (caar phs))
+                (go (cdr phs) (append (cadar phs) acc))
+            )
+            (else
+                (go (cdr phs) acc)
             )
         )
     )
+    (go phrases '())
 )
 
 ; Replace all * to <new>
