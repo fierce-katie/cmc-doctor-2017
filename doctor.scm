@@ -14,15 +14,33 @@
     )
 )
 
-(define control-strats (list random-weights))
+(define (cond-weights user-response answers _ans-strats)
+    (let
+        ((strat-func (choose-cond-weight strategies user-response answers)))
+        ;(display strats)
+        ;(newline)
+        ;(display strat-func)
+        ;(newline)
+        (cons strat-func (strat-func user-response answers))
+    )
+)
+
+(define control-strats (list random-weights cond-weights))
+
+; COND WITH WEIGHTS CONTROL STRATEGY
+(define (choose-cond-weight strats user-response answers)
+    (cond
+        ((null? strats) hedge-func) ; this shouldn't happen
+        (((pred (car strats)) user-response answers) (func (car strats)))
+        (else (choose-cond-weight (cdr strats) user-response answers))
+    )
+)
 
 ; RANDOM-WEIGHTS CONTROL STRATEGY
 
 ; Get list of all strategy functions that can be applied
 (define (choose-strats user-response answers)
-    (append  (list (list hedge-func 1) (list qualifier-func 2))
-             (filter-preds strategies user-response answers)
-    )
+    (filter-preds strategies user-response answers)
 )
 
 ; Filter strategies that can be applied
@@ -63,6 +81,9 @@
     )
 )
 ; STRATEGY PREDICATES
+
+(define (hedge-pred _user-response _ans-strats) #t)
+(define qualifier-pred hedge-pred)
 
 ; Check if user answer is too short
 (define (length-pred user-response _answers)
@@ -111,12 +132,15 @@
     (append (qualifier) (change-person user-response))
 )
 
-; List of strategy predicates and matching functions
+; List of strategy predicates and matching functions,
+; sorted by weight
 (define strategies
     (list
-        (list length-pred lenght-func 3)
-        (list earlier-pred earlier-func 4)
         (list keywords-pred keywords-func 5)
+        (list length-pred lenght-func 4)
+        (list earlier-pred earlier-func 3)
+        (list qualifier-pred qualifier-func 2)
+        (list hedge-pred hedge-func 1)
     )
 )
 
@@ -319,6 +343,7 @@
 
 ; Main loop
 (define (doctor-driver-loop name answers ans-strats ctl-strat)
+    (print ctl-strat)
     (newline)
     (print '**)
     (let ((user-response (read)))
@@ -335,7 +360,7 @@
                      (prev-strat (car rep))
                      (phrase (cdr rep)))
                     (print prev-strat)
-                    (print ans-strats)
+                    ;(print ans-strats)
                     (print phrase)
                     (doctor-driver-loop name (cons user-response answers) (count-strat prev-strat ans-strats) ctl-strat)
                 )
