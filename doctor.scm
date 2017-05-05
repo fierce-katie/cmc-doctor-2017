@@ -1,5 +1,67 @@
 #lang scheme/base
 
+; CONTROL STRATEGIES
+
+(define (random-weights user-response answers _ans-strats)
+    (let*
+        ((strats (choose-strats user-response answers))
+         (strat-func (pick-weighted strats)))
+        ;(display strats)
+        ;(newline)
+        ;(display strat-func)
+        ;(newline)
+        (cons strat-func (strat-func user-response answers))
+    )
+)
+
+(define control-strats (list random-weights))
+
+; RANDOM-WEIGHTS CONTROL STRATEGY
+
+; Get list of all strategy functions that can be applied
+(define (choose-strats user-response answers)
+    (append  (list (list hedge-func 1) (list qualifier-func 2))
+             (filter-preds strategies user-response answers)
+    )
+)
+
+; Filter strategies that can be applied
+(define (filter-preds strats user-response answers)
+    (define (go lst acc)
+        (cond
+            ((null? lst) acc)
+            (((pred (car lst)) user-response answers)
+                (go (cdr lst) (cons (cdr (car lst)) acc))
+            )
+            (else (go (cdr lst) acc))
+        )
+    )
+    (go strats '())
+)
+
+; Pick random strategy using weights.
+; strats = ((func weitght) ...)
+(define (pick-weighted strats)
+    (define (go cur aim lst)
+        (cond
+            ((null? (cdr lst))
+                (car lst)
+            )
+            ((>= (+ cur (cadar lst)) aim)
+                (car lst)
+            )
+            (else
+                (go (+ cur (cadar lst)) aim (cdr lst))
+            )
+         )
+    )
+    (let*
+        ((total (foldl + 0 (map cadr strats)))
+         (rnd (+ 1 (random total))))
+        ;(display rnd) (newline)
+        (car (go 0 rnd strats))
+    )
+)
 ; STRATEGY PREDICATES
 
 ; Check if user answer is too short
@@ -211,53 +273,6 @@
     )
 )
 
-; STRATEGY CHOICE
-
-; Get list of all strategy functions that can be applied
-(define (choose-strats user-response answers)
-    (append  (list (list hedge-func 1) (list qualifier-func 2))
-             (filter-preds strategies user-response answers)
-    )
-)
-
-; Filter strategies that can be applied
-(define (filter-preds strats user-response answers)
-    (define (go lst acc)
-        (cond
-            ((null? lst) acc)
-            (((pred (car lst)) user-response answers)
-                (go (cdr lst) (cons (cdr (car lst)) acc))
-            )
-            (else (go (cdr lst) acc))
-        )
-    )
-    (go strats '())
-)
-
-; Pick random strategy using weights.
-; strats = ((func weitght) ...)
-(define (pick-weighted strats)
-    (define (go cur aim lst)
-        (cond
-            ((null? (cdr lst))
-                (car lst)
-            )
-            ((>= (+ cur (cadar lst)) aim)
-                (car lst)
-            )
-            (else
-                (go (+ cur (cadar lst)) aim (cdr lst))
-            )
-         )
-    )
-    (let*
-        ((total (foldl + 0 (map cadr strats)))
-         (rnd (+ 1 (random total))))
-        ;(display rnd) (newline)
-        (car (go 0 rnd strats))
-    )
-)
-
 ; UTILS
 
 ; #t or #f with equal probability
@@ -266,6 +281,17 @@
 ; Pick random element from list
 (define (pick-random lst)
   (list-ref lst (random (length lst)))
+)
+
+; Store items in list (<item> . <count>)
+(define (count-strat new prev)
+    (cond
+        ((null? prev) (list (cons new 1)))
+        ((equal? new (caar prev))
+            (cons (cons new (+ 1 (cdar prev))) (cdr prev))
+        )
+        (else (cons (car prev) (count-strat new (cdr prev))))
+    )
 )
 
 ; MAIN
@@ -277,7 +303,7 @@
         (else
             (print (list 'hello name))
             (print '(what seems to be the trouble?))
-            (doctor-driver-loop name '())
+            (doctor-driver-loop name '() '() (pick-random control-strats))
         )
     )
 )
@@ -292,7 +318,7 @@
 )
 
 ; Main loop
-(define (doctor-driver-loop name answers)
+(define (doctor-driver-loop name answers ans-strats ctl-strat)
     (newline)
     (print '**)
     (let ((user-response (read)))
@@ -304,23 +330,20 @@
                 (visit-doctor (ask-name))
             )
             (else
-                (print (reply user-response answers))
-                (doctor-driver-loop name (cons user-response answers))
+                (let*
+                    ((rep (reply ctl-strat user-response answers ans-strats))
+                     (prev-strat (car rep))
+                     (phrase (cdr rep)))
+                    (print prev-strat)
+                    (print ans-strats)
+                    (print phrase)
+                    (doctor-driver-loop name (cons user-response answers) (count-strat prev-strat ans-strats) ctl-strat)
+                )
             )
         )
     )
 )
 
 ; Reply to visitor
-(define (reply user-response answers)
-    (let*
-        ((strats (choose-strats user-response answers))
-         (strat-func (pick-weighted strats)))
-        ;(display strats)
-        ;(newline)
-        ;(display strat-func)
-        ;(newline)
-        (strat-func user-response answers)
-    )
-)
+(define (reply ctl-strat user-response answers ans-strats) (ctl-strat user-response answers ans-strats))
 
