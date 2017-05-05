@@ -6,10 +6,6 @@
     (let*
         ((strats (choose-strats user-response answers))
          (strat-func (pick-weighted strats)))
-        ;(display strats)
-        ;(newline)
-        ;(display strat-func)
-        ;(newline)
         (cons strat-func (strat-func user-response answers))
     )
 )
@@ -17,17 +13,78 @@
 (define (cond-weights user-response answers _ans-strats)
     (let
         ((strat-func (choose-cond-weight strategies user-response answers)))
-        ;(display strats)
-        ;(newline)
-        ;(display strat-func)
-        ;(newline)
         (cons strat-func (strat-func user-response answers))
     )
 )
 
-(define control-strats (list random-weights cond-weights))
+(define (hist-strats user-response answers ans-strats)
+    (if (null? ans-strats)
+        (let*
+            ((strats (choose-strats user-response answers))
+             (strat-func (car (pick-random strats))))
+             (cons strat-func (strat-func user-response answers))
+        )
+        (let*
+            ((strats (choose-strats user-response answers))
+             (excl (get-most-often ans-strats))
+             (strat-func (pick-random-excl strats excl)))
+            (cons strat-func (strat-func user-response answers))
+        )
+    )
+)
+
+(define control-strats (list random-weights cond-weights hist-strats))
+
+; CHECKING HISTORY CONTROL STRATEGY
+
+; Pick random list element, excluding certain value
+(define (pick-random-excl lst excl)
+    (display (list "excl" excl))
+    (let ((x (car (pick-random lst))))
+        (display (list "random" x))
+        (if (equal? x excl)
+            (pick-random-excl lst excl)
+            x
+        )
+    )
+)
+
+; Get strat that has been used more than 30% in previous answers
+; strats = (<item> . <count>) and is not empty
+(define (get-most-often strats)
+    (let*
+        ((m (max-total strats))
+         (total (cdr m))
+         (f (caar m))
+         (v (cdar m)))
+        (display (list "total" total))
+        (display (list "max" (car m)))
+        (if (> v (* total 0.33))
+            f
+            #f
+        )
+    )
+)
+
+; Calculate total number of items and the maximum
+(define (max-total lst)
+    (define (update-max m1 m2)
+        (if (> (cdr m1) (cdr m2))
+            m1
+            m2
+        )
+    )
+    (define (go l total m)
+        (if (null? l)
+            (cons m total)
+            (go (cdr l) (+ total (cdar l)) (update-max m (car l)))
+        )
+    )
+    (go lst 0 '(#f . 0))
+)
 
 ; COND WITH WEIGHTS CONTROL STRATEGY
+
 (define (choose-cond-weight strats user-response answers)
     (cond
         ((null? strats) hedge-func) ; this shouldn't happen
@@ -360,7 +417,7 @@
                      (prev-strat (car rep))
                      (phrase (cdr rep)))
                     (print prev-strat)
-                    ;(print ans-strats)
+                    (print ans-strats)
                     (print phrase)
                     (doctor-driver-loop name (cons user-response answers) (count-strat prev-strat ans-strats) ctl-strat)
                 )
