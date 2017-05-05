@@ -39,9 +39,9 @@
 
 ; Pick random list element, excluding certain value
 (define (pick-random-excl lst excl)
-    (display (list "excl" excl))
+    ;(display (list "excl" excl))
     (let ((x (car (pick-random lst))))
-        (display (list "random" x))
+        ;(display (list "random" x))
         (if (equal? x excl)
             (pick-random-excl lst excl)
             x
@@ -57,8 +57,8 @@
          (total (cdr m))
          (f (caar m))
          (v (cdar m)))
-        (display (list "total" total))
-        (display (list "max" (car m)))
+        ;(display (list "total" total))
+        ;(display (list "max" (car m)))
         (if (> v (* total 0.33))
             f
             #f
@@ -400,7 +400,7 @@
 
 ; Main loop
 (define (doctor-driver-loop name answers ans-strats ctl-strat)
-    (print ctl-strat)
+    ;(print ctl-strat)
     (newline)
     (print '**)
     (let ((user-response (read)))
@@ -416,8 +416,8 @@
                     ((rep (reply ctl-strat user-response answers ans-strats))
                      (prev-strat (car rep))
                      (phrase (cdr rep)))
-                    (print prev-strat)
-                    (print ans-strats)
+                    ;(print prev-strat)
+                    ;(print ans-strats)
                     (print phrase)
                     (doctor-driver-loop name (cons user-response answers) (count-strat prev-strat ans-strats) ctl-strat)
                 )
